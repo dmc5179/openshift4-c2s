@@ -39,10 +39,10 @@ Parameters:
       The Route53 zone to register the targets with, such as "example.com".
     Type: String
 
-  PublicSubnets:
-    Description: >-
-      The internet-facing subnets.
-    Type: List<AWS::EC2::Subnet::Id>
+#  PublicSubnets:
+#    Description: >-
+#      The internet-facing subnets.
+#    Type: List<AWS::EC2::Subnet::Id>
 
   PrivateSubnets:
     Description: >-
@@ -85,7 +85,7 @@ Metadata:
         Parameters:
           - Publish
           - VpcId
-          - PublicSubnets
+#          - PublicSubnets
           - PrivateSubnets
       - Label:
           default: "DNS"
@@ -102,8 +102,8 @@ Metadata:
         default: "Publish External"
       VpcId:
         default: "VPC ID"
-      PublicSubnets:
-        default: "Public Subnets"
+#      PublicSubnets:
+#        default: "Public Subnets"
       PrivateSubnets:
         default: "Private Subnets"
       HostedZoneName:
@@ -113,25 +113,25 @@ Metadata:
       Route53Enabled:
         default: "Use Route53 DNS"
 
+# TODO: Need a conditional on creating a route53 zone
 Conditions:
   DoRoute53: !Equals ["true", !Ref Route53Enabled]
   DoExternal: !Equals ["External", !Ref Publish]
-  DoExternalRoute53: !And [!Equals ["true", !Ref Route53Enabled], !Equals ["External", !Ref Publish]]
 
 Resources:
-  ExtApiElb:
-    Condition: DoExternal
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Name: !Join ["-", [!Ref InfrastructureName, "ext"]]
-      IpAddressType: ipv4
-      Subnets: !Ref PublicSubnets
-      Type: network
-      Tags:
-        - Key: "Name"
-          Value: !Join ["-", [!Ref InfrastructureName, "ext"]]
-        - Key: !Join ["", [kubernetes.io/cluster/, !Ref InfrastructureName]]
-          Value: owned
+#  ExtApiElb:
+#    Condition: DoExternal
+#    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+#    Properties:
+#      Name: !Join ["-", [!Ref InfrastructureName, "ext"]]
+#      IpAddressType: ipv4
+#      Subnets: !Ref PublicSubnets
+#      Type: network
+#      Tags:
+#        - Key: "Name"
+#          Value: !Join ["-", [!Ref InfrastructureName, "ext"]]
+#        - Key: !Join ["", [kubernetes.io/cluster/, !Ref InfrastructureName]]
+#          Value: owned
 
   IntApiElb:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -163,26 +163,26 @@ Resources:
         - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
           Value: "owned"
 
-  ExternalApiServerRecord:
-    Condition: DoExternalRoute53
-    Type: AWS::Route53::RecordSetGroup
-    Properties:
-      Comment: Alias record for the API server
-      HostedZoneId: !Ref HostedZoneId
-      RecordSets:
-        - Name:
-            !Join [
-              ".",
-              [
-                "api",
-                !Ref ClusterName,
-                !Join ["", [!Ref HostedZoneName, "."]]
-              ]
-            ]
-          Type: A
-          AliasTarget:
-            HostedZoneId: !GetAtt ExtApiElb.CanonicalHostedZoneID
-            DNSName: !GetAtt ExtApiElb.DNSName
+#  ExternalApiServerRecord:
+#    #Condition: DoExternal !And DoRoute53
+#    Type: AWS::Route53::RecordSetGroup
+#    Properties:
+#      Comment: Alias record for the API server
+#      HostedZoneId: !Ref HostedZoneId
+#      RecordSets:
+#        - Name:
+#            !Join [
+#              ".",
+#              [
+#                "api",
+#                !Ref ClusterName,
+#                !Join ["", [!Ref HostedZoneName, "."]]
+#              ]
+#            ]
+#          Type: A
+#          AliasTarget:
+#            HostedZoneId: !GetAtt ExtApiElb.CanonicalHostedZoneID
+#            DNSName: !GetAtt ExtApiElb.DNSName
 
   InternalApiServerRecord:
     Condition: DoRoute53
@@ -218,37 +218,37 @@ Resources:
             HostedZoneId: !GetAtt IntApiElb.CanonicalHostedZoneID
             DNSName: !GetAtt IntApiElb.DNSName
 
-  ExternalApiListener:
-    Condition: DoExternal
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn:
-            Ref: ExternalApiTargetGroup
-      LoadBalancerArn:
-        Ref: ExtApiElb
-      Port: 6443
-      Protocol: TCP
+#  ExternalApiListener:
+#    Condition: DoExternal
+#    Type: AWS::ElasticLoadBalancingV2::Listener
+#    Properties:
+#      DefaultActions:
+#        - Type: forward
+#          TargetGroupArn:
+#            Ref: ExternalApiTargetGroup
+#      LoadBalancerArn:
+#        Ref: ExtApiElb
+#      Port: 6443
+#      Protocol: TCP
 
-  ExternalApiTargetGroup:
-    Condition: DoExternal
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      Name: !Join ["-", [!Ref InfrastructureName, "aext"]]
-      Port: 6443
-      Protocol: TCP
-      TargetType: ip
-      VpcId:
-        Ref: VpcId
-      TargetGroupAttributes:
-        - Key: deregistration_delay.timeout_seconds
-          Value: 60
-      Tags:
-        - Key: "Name"
-          Value: !Join ["-", [!Ref InfrastructureName, "aext"]]
-        - Key: !Join ["", [kubernetes.io/cluster/, !Ref InfrastructureName]]
-          Value: owned
+#  ExternalApiTargetGroup:
+#    Condition: DoExternal
+#    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+#    Properties:
+#      Name: !Join ["-", [!Ref InfrastructureName, "aext"]]
+#      Port: 6443
+#      Protocol: TCP
+#      TargetType: ip
+#      VpcId:
+#        Ref: VpcId
+#      TargetGroupAttributes:
+#        - Key: deregistration_delay.timeout_seconds
+#          Value: 60
+#      Tags:
+#        - Key: "Name"
+#          Value: !Join ["-", [!Ref InfrastructureName, "aext"]]
+#        - Key: !Join ["", [kubernetes.io/cluster/, !Ref InfrastructureName]]
+#          Value: owned
 
   InternalApiListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -315,10 +315,9 @@ Outputs:
     Description: Hosted zone ID for the private DNS.
     Value: !Ref IntDns
 
-  ExternalApiLoadBalancerName:
-    Condition: DoExternal
-    Description: Full name of the external API load balancer.
-    Value: !GetAtt ExtApiElb.LoadBalancerFullName
+#  ExternalApiLoadBalancerName:
+#    Description: Full name of the external API load balancer.
+#    Value: !GetAtt ExtApiElb.LoadBalancerFullName
 
   InternalApiLoadBalancerName:
     Description: Full name of the internal API load balancer.
@@ -328,10 +327,9 @@ Outputs:
     Description: Full hostname of the API server.
     Value: !Join [".", ["api-int", !Ref ClusterName, !Ref HostedZoneName]]
 
-  ExternalApiTargetGroupArn:
-    Condition: DoExternal
-    Description: ARN of the external API target group.
-    Value: !Ref ExternalApiTargetGroup
+#  ExternalApiTargetGroupArn:
+#    Description: ARN of the external API target group.
+#    Value: !Ref ExternalApiTargetGroup
 
   InternalApiTargetGroupArn:
     Description: ARN of the internal API target group.

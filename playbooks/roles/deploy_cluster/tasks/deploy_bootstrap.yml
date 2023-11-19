@@ -3,17 +3,17 @@
 - name: Get vpc facts
   include_tasks: vpc_facts.yml
   when:
-    - (cloudformation_based | bool) and ( not existing_vpc | bool)
+    - (cloudformation_based | bool) and (not existing_vpc | bool)
 
 - name: Get infra facts
   include_tasks: infra_facts.yml
   when:
-    - (cloudformation_based | bool)
+    - (cloudformation_based | bool) and (not existing_infra | bool)
 
 - name: Get security facts
   include_tasks: security_facts.yml
   when:
-    - (cloudformation_based | bool)
+    - (cloudformation_based | bool) and (not existing_security | bool)
 
 - debug:
     var: internal_api_target_group_arn
