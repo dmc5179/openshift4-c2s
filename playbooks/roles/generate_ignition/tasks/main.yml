@@ -83,22 +83,21 @@
     name: deploy_cluster
     tasks_from: vpc_facts.yml
   when:
-    - (cloudformation_based | bool)
-    - not (existing_vpc | bool)
+    - (cloudformation_based | bool) and (not existing_vpc | bool)
 
 - name: Pull in infra cloudformation facts
   import_role:
     name: deploy_cluster
     tasks_from: infra_facts.yml
   when:
-    - (cloudformation_based | bool)
+    - (cloudformation_based | bool) and (not existing_infra | bool)
 
 - name: Pull in security cloudformation facts
   import_role:
     name: deploy_cluster
     tasks_from: security_facts.yml
   when:
-    - (cloudformation_based | bool)
+    - (cloudformation_based | bool) and (not existing_security | bool)
 
 - name: Copy template install-config.yaml
   template:
@@ -130,9 +129,10 @@
 - name: Create manifests
   shell: "{{ openshift_install }} create manifests --dir={{ ignition_configs }}"
 
-#- name: Stop after creating manifests
-#  fail:
-#    msg: "Stop after creating manifests"
+- name: Stop after creating manifests
+  fail:
+    msg: "Stop after creating manifests"
+  when: manifests_only | default(False)
 
 - name: Set masters to unschedulable
   replace:
@@ -166,22 +166,22 @@
 #    replace: 'upstream: http://localhost:8080/graph'
 
 # There's a BZ to fix this coming in something like 4.12
-- name: Remove default cloud provider config
-  file:
-    path: "{{ ignition_configs }}/manifests/cloud-provider-config.yaml"
-    state: absent
-  when:
-    - (platform is match("aws"))
-    - ("us-iso" in ansible_env.AWS_DEFAULT_REGION)
+#- name: Remove default cloud provider config
+#  file:
+#    path: "{{ ignition_configs }}/manifests/cloud-provider-config.yaml"
+#    state: absent
+#  when:
+#    - (platform is match("aws"))
+#    - ("us-iso" in ansible_env.AWS_DEFAULT_REGION)
 
-- name: Copy new cloud provider config
-  template:
-    src: cloud-provider-config.yaml.j2
-    dest: "{{ ignition_configs }}/manifests/cloud-provider-config.yaml"
-    mode: 0644
-  when:
-    - (platform is match("aws"))
-    - ("us-iso" in ansible_env.AWS_DEFAULT_REGION)
+#- name: Copy new cloud provider config
+#  template:
+#    src: cloud-provider-config.yaml.j2
+#    dest: "{{ ignition_configs }}/manifests/cloud-provider-config.yaml"
+#    mode: 0644
+#  when:
+#    - (platform is match("aws"))
+#    - ("us-iso" in ansible_env.AWS_DEFAULT_REGION)
 
 - name: Set access key fact
   set_fact:
@@ -248,23 +248,23 @@
   when:
     - (platform is match("aws") and (not route53_enabled | bool))
 
-#- name: Add Combine Metadata interceptor for master nodes
-#  template:
-#    src: c2s-instance-metadata-machineconfig.yaml.j2
-#    dest: "{{ ignition_configs }}/manifests/c2s-instance-metadata-master-machineconfig.yaml"
-#    mode: 0644
-#  vars:
-#    node_role: 'master'
-#  when: ( combine | bool )
+- name: Add Combine Metadata interceptor for master nodes
+  template:
+    src: c2s-instance-metadata-machineconfig.yaml.j2
+    dest: "{{ ignition_configs }}/manifests/c2s-instance-metadata-master-machineconfig.yaml"
+    mode: 0644
+  vars:
+    node_role: 'master'
+  when: ( combine | bool )
 
-#- name: Add Combine Metadata interceptor for worker nodes
-#  template:
-#    src: c2s-instance-metadata-machineconfig.yaml.j2
-#    dest: "{{ ignition_configs }}/manifests/c2s-instance-metadata-worker-machineconfig.yaml"
-#    mode: 0644
-#  vars:
-#    node_role: 'worker'
-#  when: ( combine | bool )
+- name: Add Combine Metadata interceptor for worker nodes
+  template:
+    src: c2s-instance-metadata-machineconfig.yaml.j2
+    dest: "{{ ignition_configs }}/manifests/c2s-instance-metadata-worker-machineconfig.yaml"
+    mode: 0644
+  vars:
+    node_role: 'worker'
+  when: ( combine | bool )
 
 - name: Slurp json state
   shell: grep -A 2 'ClusterID' {{ ignition_configs }}/.openshift_install_state.json | grep InfraID | awk '{print $2}' | tr -d '"'
@@ -336,23 +336,25 @@
     - (platform is match("aws"))
     - (ec2_sg.worker.name is defined)
 
-#- name: Change master machine set internal LB name
-#  ansible.builtin.replace:
-#    path: "{{ item }}"
-#    regexp: "{{infrastructure_id}}-int"
-#    replace: "{{infrastructure_id}}-int"
-#  with_fileglob:
-#    - '{{ ignition_configs }}/manifests/*.y*ml'
-#    - '{{ ignition_configs }}/openshift/*.y*ml'
+- name: Change master machine set internal LB name
+  ansible.builtin.replace:
+    path: "{{ item }}"
+    regexp: "{{infrastructure_id}}-int"
+    replace: "{{infrastructure_id}}-int"
+  with_fileglob:
+    - '{{ ignition_configs }}/manifests/*.y*ml'
+    - '{{ ignition_configs }}/openshift/*.y*ml'
 
-#- name: Change master machine set internal LB name
-#  ansible.builtin.replace:
-#    path: "{{ item }}"
-#    regexp: "{{infrastructure_id}}-ext"
-#    replace: "{{infrastructure_id}}-ext"
-#  with_fileglob:
-#    - '{{ ignition_configs }}/manifests/*.y*ml'
-#    - '{{ ignition_configs }}/openshift/*.y*ml'
+- name: Change master machine set internal LB name
+  ansible.builtin.replace:
+    path: "{{ item }}"
+    regexp: "{{infrastructure_id}}-ext"
+    replace: "{{infrastructure_id}}-ext"
+  with_fileglob:
+    - '{{ ignition_configs }}/manifests/*.y*ml'
+    - '{{ ignition_configs }}/openshift/*.y*ml'
+  when:
+    - (ocp_cluster_publish is match("External"))
 
 - name: Change private subnet 0 name
   ansible.builtin.replace:
@@ -390,16 +392,16 @@
     - (platform is match("aws"))
     - (private_subnets[2].name is defined)
 
-#- name: Remove default Ingress Controller config
-#  file:
-#    path: "{{ ignition_configs }}/manifests/cluster-ingress-default-ingresscontroller.yaml"
-#    state: absent
+- name: Remove default Ingress Controller config
+  file:
+    path: "{{ ignition_configs }}/manifests/cluster-ingress-default-ingresscontroller.yaml"
+    state: absent
 
-#- name: Configure Ingress Controller for HostNetwork
-#  template:
-#    src: cluster-ingress-default-ingresscontroller-hostnetwork.yaml.j2
-#    dest: "{{ ignition_configs }}/manifests/cluster-ingress-default-ingresscontroller.yaml"
-#    mode: 0644
+- name: Configure Ingress Controller for HostNetwork
+  template:
+    src: cluster-ingress-default-ingresscontroller-hostnetwork.yaml.j2
+    dest: "{{ ignition_configs }}/manifests/cluster-ingress-default-ingresscontroller.yaml"
+    mode: 0644
 
 #- name: Configure Ingress Controller for Classic Load Balancer
 #  template:
@@ -418,7 +420,9 @@
     path: "{{ ignition_configs }}/manifests/cluster-network-03-config.yml"
     state: absent
   when:
-    - (platform is match("aws") and "us-iso" in ansible_env.AWS_DEFAULT_REGION)
+    - platform is match("aws")
+    - ( "us-iso" in ansible_env.AWS_DEFAULT_REGION )
+    - (not combine | bool)
 
 - name: Customize custom cluster network policy
   template:
@@ -426,11 +430,14 @@
     dest: "{{ ignition_configs }}/manifests/cluster-network-03-config.yml"
     mode: 0644
   when:
-    - (platform is match("aws") and "us-iso" in ansible_env.AWS_DEFAULT_REGION)
+    - platform is match("aws")
+    - ( "us-iso" in ansible_env.AWS_DEFAULT_REGION )
+    - (not combine | bool)
 
-#- name: Stop before generating ignition configs
-#  fail:
-#    msg: "Stop before generating ignition configs"
+- name: Stop before generating ignition configs
+  fail:
+    msg: "Stop before generating ignition configs"
+  when: finished_manifests_only | default(False)
 
 - name: Create ignition configs
   shell: "{{ openshift_install }} create ignition-configs --dir={{ ignition_configs }}"
