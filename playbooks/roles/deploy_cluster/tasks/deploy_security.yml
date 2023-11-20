@@ -35,7 +35,7 @@
       InfrastructureName: "{{ infrastructure_id }}"
       VpcCidr: "{{ vpc_cidr }}"
       VpcId: "{{ vpc_id }}"
-      PrivateSubnets: "{{ ec2_private_subnets }}"
+      PrivateSubnets: "{{ ec2_private_subnets | join(',') }}"
       CreateIAMRoles: "false"
       CreateSecurityGroups: "true"
   register: sec_stack_outputs

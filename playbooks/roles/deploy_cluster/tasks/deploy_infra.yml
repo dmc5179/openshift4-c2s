@@ -22,7 +22,7 @@
     validate_certs: "{{ aws_ssl_enabled }}"
     stack_name: "{{ infra_stack_name }}"
     state: present
-    disable_rollback: false
+    disable_rollback: true
     create_timeout: 10
     template: "{{ playbook_dir }}/../cloudformation/c2s/network.yaml"
     template_parameters:
@@ -30,8 +30,8 @@
       InfrastructureName: "{{ infrastructure_id }}"
       HostedZoneId: "{{ hosted_zone_id }}"
       HostedZoneName: "{{ ocp_base_domain }}"
-      PublicSubnets: "{{ ec2_public_subnets | default(ec2_private_subnets) }}"
-      PrivateSubnets: "{{ ec2_private_subnets }}"
+      #PublicSubnets: "{{ ec2_public_subnets | default(ec2_private_subnets) }}"
+      PrivateSubnets: "{{ ec2_private_subnets | join(',') }}"
       VpcId: "{{ vpc_id }}"
       Publish: "{{ ocp_cluster_publish }}"
       Route53Enabled: "{{ route53_enabled | string | lower }}"

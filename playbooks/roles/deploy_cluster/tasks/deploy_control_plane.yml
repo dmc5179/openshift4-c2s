@@ -8,12 +8,12 @@
 - name: Get infra facts
   include_tasks: infra_facts.yml
   when:
-    - (cloudformation_based | bool)
+    - (cloudformation_based | bool) and (not existing_infra | bool)
 
 - name: Get security facts
   include_tasks: security_facts.yml
   when:
-    - (cloudformation_based | bool)
+    - (cloudformation_based | bool) and (not existing_security | bool)
 
 - name: Get RHCOS AMI ID
   import_role:
