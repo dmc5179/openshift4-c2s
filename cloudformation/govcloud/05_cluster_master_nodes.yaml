@@ -12,6 +12,7 @@ Parameters:
       A short, unique cluster ID used to tag cloud resources and identify items owned or used by the cluster. You should
       use the value generated when creating the manifest files using `openshift-install create manifests`.
     Type: String
+    Default: "ocp4-abc12"
 
   RhcosAmi:
     Description: Current Red Hat Enterprise Linux CoreOS AMI to use for bootstrap.
@@ -38,7 +39,7 @@ Parameters:
     Type: AWS::EC2::Subnet::Id
 
   MasterSecurityGroupId:
-    Description: The master security group ID.
+    Description: The master security group ID to associate with master nodes.
     Type: AWS::EC2::SecurityGroup::Id
     Default: "s3://dan-combine/master.ign"
 
@@ -46,88 +47,36 @@ Parameters:
     Description: Ignition config file location, such as https://api-int.$CLUSTER_NAME.$DOMAIN:22623/config/master
     Type: String
 
-  CertificateAuthorities:
-    Description: >-
-      Base64 encoded certificate authority string to use, such as data:text/plain;charset=utf-8;base64,ABC...xYz==.
-      You should use the value generated when creating the ignition config files using
-      `openshift-install create ignition-configs`.
-    Type: String
+#  CertificateAuthorities:
+#    Description: >-
+#      Base64 encoded certificate authority string to use, such as data:text/plain;charset=utf-8;base64,ABC...xYz==.
+#      You should use the value generated when creating the ignition config files using
+#      `openshift-install create ignition-configs`.
+#    Type: String
+#    Default: "unused-field"
 
   MasterInstanceProfileName:
     Description: IAM profile to associate with master nodes.
     Type: String
 
   MasterInstanceType:
-    AllowedValues:
-    - "m4.xlarge"
-    - "m4.2xlarge"
-    - "m4.4xlarge"
-    - "m4.8xlarge"
-    - "m4.10xlarge"
-    - "m4.16xlarge"
-    - "m5.xlarge"
-    - "m5.2xlarge"
-    - "m5.4xlarge"
-    - "m5.8xlarge"
-    - "m5.10xlarge"
-    - "m5.16xlarge"
-    - "m5a.xlarge"
-    - "m5a.2xlarge"
-    - "m5a.4xlarge"
-    - "m5a.8xlarge"
-    - "m5a.10xlarge"
-    - "m5a.16xlarge"
-    - "c4.2xlarge"
-    - "c4.4xlarge"
-    - "c4.8xlarge"
-    - "c5.2xlarge"
-    - "c5.4xlarge"
-    - "c5.9xlarge"
-    - "c5.12xlarge"
-    - "c5.18xlarge"
-    - "c5.24xlarge"
-    - "c5a.2xlarge"
-    - "c5a.4xlarge"
-    - "c5a.8xlarge"
-    - "c5a.12xlarge"
-    - "c5a.16xlarge"
-    - "c5a.24xlarge"
-    - "r4.xlarge"
-    - "r4.2xlarge"
-    - "r4.4xlarge"
-    - "r4.8xlarge"
-    - "r4.16xlarge"
-    - "r5.xlarge"
-    - "r5.2xlarge"
-    - "r5.4xlarge"
-    - "r5.8xlarge"
-    - "r5.12xlarge"
-    - "r5.16xlarge"
-    - "r5.24xlarge"
-    - "r5a.xlarge"
-    - "r5a.2xlarge"
-    - "r5a.4xlarge"
-    - "r5a.8xlarge"
-    - "r5a.12xlarge"
-    - "r5a.16xlarge"
-    - "r5a.24xlarge"
-    Default: m5.xlarge
+    Default: m5.2xlarge
     Type: String
 
 #  RegisterNlbIpTargetsLambdaArn:
 #    Description: ARN for NLB IP target registration lambda.
 #    Type: String
 
-  ExternalApiTargetGroupArn:
-    Description: ARN for external API load balancer target group.
-    Type: String
+#  ExternalApiTargetGroupArn:
+#    Description: ARN for external API load balancer target group. Supply the value from the cluster infrastructure or select "no" for AutoRegisterELB.
+#    Type: String
 
   InternalApiTargetGroupArn:
-    Description: ARN for internal API load balancer target group.
+    Description: ARN for internal API load balancer target group. Supply the value from the cluster infrastructure or select "no" for AutoRegisterELB.
     Type: String
 
   InternalServiceTargetGroupArn:
-    Description: ARN for internal service load balancer target group.
+    Description: ARN for internal service load balancer target group. Supply the value from the cluster infrastructure or select "no" for AutoRegisterELB.
     Type: String
 
 Metadata:
@@ -143,7 +92,7 @@ Metadata:
       - MasterInstanceType
       - RhcosAmi
       - IgnitionLocation
-      - CertificateAuthorities
+#      - CertificateAuthorities
       - MasterSecurityGroupId
       - MasterInstanceProfileName
     - Label:
@@ -181,8 +130,8 @@ Metadata:
         default: "Red Hat Enterprise Linux CoreOS AMI ID"
       BootstrapIgnitionLocation:
         default: "Master Ignition Source"
-      CertificateAuthorities:
-        default: "Ignition CA String"
+#      CertificateAuthorities:
+#        default: "Ignition CA String"
       MasterSecurityGroupId:
         default: "Master Security Group ID"
 #      AutoRegisterDNS:
@@ -206,8 +155,8 @@ Resources:
       - DeviceName: /dev/xvda
         Ebs:
           VolumeSize: "120"
-          VolumeType: "gp2"
-      IamInstanceProfile: "Combine-TS-WLDEVELOPER-EC2"
+          VolumeType: "gp3"
+      IamInstanceProfile: !Ref MasterInstanceProfileName
       InstanceType: !Ref MasterInstanceType
       NetworkInterfaces:
       - AssociatePublicIpAddress: "false"
@@ -219,15 +168,14 @@ Resources:
         Fn::Base64: !Sub [
           '{"ignition":{"config":{"merge":[{"source":"${SOURCE}"}]},"security":{"tls":{"certificateAuthorities":[{"source":"${CA_BUNDLE}"}]}},"version":"3.1.0"}}',
           {
-            SOURCE: !Ref IgnitionLocation,
-            CA_BUNDLE: !Ref CertificateAuthorities
+            SOURCE: !Ref IgnitionLocation
           }
         ]
       Tags:
       - Key: Name
         Value: !Join ["-", [!Ref InfrastructureName, "master", "0"]]
       - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
-        Value: "owned"
+        Value: "shared"
 
 #  RegisterMaster0:
 #    Condition: DoRegistration
@@ -261,8 +209,8 @@ Resources:
       - DeviceName: /dev/xvda
         Ebs:
           VolumeSize: "120"
-          VolumeType: "gp2"
-      IamInstanceProfile: "Combine-TS-WLDEVELOPER-EC2"
+          VolumeType: "gp3"
+      IamInstanceProfile: !Ref MasterInstanceProfileName
       InstanceType: !Ref MasterInstanceType
       NetworkInterfaces:
       - AssociatePublicIpAddress: "false"
@@ -274,15 +222,14 @@ Resources:
         Fn::Base64: !Sub [
           '{"ignition":{"config":{"merge":[{"source":"${SOURCE}"}]},"security":{"tls":{"certificateAuthorities":[{"source":"${CA_BUNDLE}"}]}},"version":"3.1.0"}}',
           {
-            SOURCE: !Ref IgnitionLocation,
-            CA_BUNDLE: !Ref CertificateAuthorities
+            SOURCE: !Ref IgnitionLocation
           }
         ]
       Tags:
       - Key: Name
         Value: !Join ["-", [!Ref InfrastructureName, "master", "1"]]
       - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
-        Value: "owned"
+        Value: "shared"
 
 #  RegisterMaster1:
 #    Condition: DoRegistration
@@ -316,8 +263,8 @@ Resources:
       - DeviceName: /dev/xvda
         Ebs:
           VolumeSize: "120"
-          VolumeType: "gp2"
-      IamInstanceProfile: "Combine-TS-WLDEVELOPER-EC2"
+          VolumeType: "gp3"
+      IamInstanceProfile: !Ref MasterInstanceProfileName
       InstanceType: !Ref MasterInstanceType
       NetworkInterfaces:
       - AssociatePublicIpAddress: "false"
@@ -327,17 +274,16 @@ Resources:
         SubnetId: !Ref "Master2Subnet"
       UserData:
         Fn::Base64: !Sub [
-          '{"ignition":{"config":{"merge":[{"source":"${SOURCE}"}]},"security":{"tls":{"certificateAuthorities":[{"source":"${CA_BUNDLE}"}]}},"version":"3.1.0"}}',
+          '{"ignition":{"config":{"merge":[{"source":"${SOURCE}"}]},"version":"3.1.0"}}',
           {
-            SOURCE: !Ref IgnitionLocation,
-            CA_BUNDLE: !Ref CertificateAuthorities
+            SOURCE: !Ref IgnitionLocation
           }
         ]
       Tags:
       - Key: Name
         Value: !Join ["-", [!Ref InfrastructureName, "master", "2"]]
       - Key: !Join ["", ["kubernetes.io/cluster/", !Ref InfrastructureName]]
-        Value: "owned"
+        Value: "shared"
 
 #  RegisterMaster2:
 #    Condition: DoRegistration
@@ -369,9 +315,5 @@ Outputs:
     Value:
       !Join [
         ",",
-        [
-          !GetAtt Master0.PrivateIp,
-          !GetAtt Master1.PrivateIp,
-          !GetAtt Master2.PrivateIp
-        ]
+        [!GetAtt Master0.PrivateIp, !GetAtt Master1.PrivateIp, !GetAtt Master2.PrivateIp]
       ]

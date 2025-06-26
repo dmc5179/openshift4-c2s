@@ -44,13 +44,13 @@ Parameters:
     Type: String
     Default: "s3://mybucket/bootstrap.ign"
 
-  CertificateAuthorities:
-    Description: >-
-      Base64 encoded certificate authority string to use, such as data:text/plain;charset=utf-8;base64,ABC...xYz==.
-      You should use the value generated when creating the ignition config files using
-      `openshift-install create ignition-configs`.
-    Type: String
-    Default: "unused-field"
+#  CertificateAuthorities:
+#    Description: >-
+#      Base64 encoded certificate authority string to use, such as data:text/plain;charset=utf-8;base64,ABC...xYz==.
+#      You should use the value generated when creating the ignition config files using
+#      `openshift-install create ignition-configs`.
+#    Type: String
+#    Default: "unused-field"
 
 #  AutoRegisterELB:
 #    AllowedValues:
@@ -207,10 +207,9 @@ Resources:
         SubnetId: !Ref "PublicSubnet"
       UserData:
         Fn::Base64: !Sub [
-          '{"ignition":{"config":{"merge":[{"source":"${SOURCE}"}]},"security":{"tls":{"certificateAuthorities":[{"source":"${CA_BUNDLE}"}]}},"version":"3.1.0"}}',
+          '{"ignition":{"config":{"merge":[{"source":"${SOURCE}"}]},"version":"3.1.0"}}',
           {
-            SOURCE: !Ref IgnitionLocation,
-            CA_BUNDLE: !Ref CertificateAuthorities
+            SOURCE: !Ref IgnitionLocation
           }
         ]
       Tags:
