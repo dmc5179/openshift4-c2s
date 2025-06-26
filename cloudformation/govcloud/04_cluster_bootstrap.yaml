@@ -39,7 +39,6 @@ Parameters:
     Type: AWS::EC2::VPC::Id
 
   BootstrapIgnitionLocation:
-    Default: s3://my-s3-bucket/bootstrap.ign
     Description: Ignition config file location.
     Type: String
     Default: "s3://mybucket/bootstrap.ign"
@@ -209,7 +208,7 @@ Resources:
         Fn::Base64: !Sub [
           '{"ignition":{"config":{"merge":[{"source":"${SOURCE}"}]},"version":"3.1.0"}}',
           {
-            SOURCE: !Ref IgnitionLocation
+            SOURCE: !Ref BootstrapIgnitionLocation
           }
         ]
       Tags:

@@ -29,6 +29,7 @@ Parameters:
   IgnitionLocation:
     Description: Ignition config file location, such as https://api-int.$CLUSTER_NAME.$DOMAIN:22623/config/worker
     Type: String
+    Default: "s3://mybucket/worker.ign"
 
 #  CertificateAuthorities:
 #    Description: >-
