@@ -57,7 +57,7 @@ Resources:
   MasterSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: !Join ["-", [!Ref InfrastructureName, "master", "sg"]]
+      GroupName: !Join ["-", [!Ref InfrastructureName, "controlplane"]]
       GroupDescription: Cluster Master Security Group
       SecurityGroupIngress:
       - IpProtocol: icmp
@@ -79,14 +79,14 @@ Resources:
       VpcId: !Ref VpcId
       Tags:
       - Key: "Name"
-        Value: !Join ["-", [!Ref InfrastructureName, "master", "sg"]]
+        Value: !Join ["-", [!Ref InfrastructureName, "controlplane"]]
       - Key: !Join ["", [kubernetes.io/cluster/, !Ref InfrastructureName]]
         Value: owned
 
   WorkerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: !Join ["-", [!Ref InfrastructureName, "worker", "sg"]]
+      GroupName: !Join ["-", [!Ref InfrastructureName, "node"]]
       GroupDescription: Cluster Worker Security Group
       SecurityGroupIngress:
       - IpProtocol: icmp
@@ -100,9 +100,36 @@ Resources:
       VpcId: !Ref VpcId
       Tags:
       - Key: "Name"
-        Value: !Join ["-", [!Ref InfrastructureName, "worker", "sg"]]
+        Value: !Join ["-", [!Ref InfrastructureName, "node"]]
       - Key: !Join ["", [kubernetes.io/cluster/, !Ref InfrastructureName]]
         Value: owned
+
+#########################################################
+  LBWorkerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Join ["-", [!Ref InfrastructureName, "lb"]]
+      GroupDescription: Cluster Worker Security Group
+      SecurityGroupIngress:
+      - IpProtocol: icmp
+        FromPort: 0
+        ToPort: 0
+        CidrIp: !Ref VpcCidr
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: !Ref VpcCidr
+      - IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        CidrIp: !Ref VpcCidr
+      VpcId: !Ref VpcId
+      Tags:
+      - Key: "Name"
+        Value: !Join ["-", [!Ref InfrastructureName, "lb"]]
+      - Key: !Join ["", [kubernetes.io/cluster/, !Ref InfrastructureName]]
+        Value: owned
+#######################################################
 
   MasterIngressEtcd:
     Type: AWS::EC2::SecurityGroupIngress
