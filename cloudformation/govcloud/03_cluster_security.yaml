@@ -80,8 +80,9 @@ Resources:
       Tags:
       - Key: "Name"
         Value: !Join ["-", [!Ref InfrastructureName, "controlplane"]]
-      - Key: !Join ["", [kubernetes.io/cluster/, !Ref InfrastructureName]]
-        Value: owned
+# Ingress complains if the owned tag is on this SG
+#      - Key: !Join ["", [kubernetes.io/cluster/, !Ref InfrastructureName]]
+#        Value: owned
 
   WorkerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -101,8 +102,9 @@ Resources:
       Tags:
       - Key: "Name"
         Value: !Join ["-", [!Ref InfrastructureName, "node"]]
-      - Key: !Join ["", [kubernetes.io/cluster/, !Ref InfrastructureName]]
-        Value: owned
+# Ingress complains if the owned tag is on this SG
+#      - Key: !Join ["", [kubernetes.io/cluster/, !Ref InfrastructureName]]
+#        Value: owned
 
 #########################################################
   LBWorkerSecurityGroup:
