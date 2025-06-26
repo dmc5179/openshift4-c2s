@@ -27,7 +27,7 @@ Parameters:
     Type: String
 
   PublicSubnet:
-    Description: The public subnet to launch the bootstrap node into.
+    Description: The public subnet to launch the bootstrap node into. Not required to be an actual public subnet
     Type: AWS::EC2::Subnet::Id
 
   MasterSecurityGroupId:

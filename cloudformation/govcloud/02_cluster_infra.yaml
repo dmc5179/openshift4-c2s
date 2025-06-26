@@ -49,7 +49,7 @@ Parameters:
   Publish:
     AllowedValues:
     - "internal"
-    - "external"
+#    - "external"
     Description: Allow external API access to the cluster
     Default: "internal"
     Type: String
