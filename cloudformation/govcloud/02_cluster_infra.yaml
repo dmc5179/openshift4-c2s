@@ -253,6 +253,8 @@ Resources:
       HealthCheckProtocol: HTTPS
       HealthyThresholdCount: 2
       UnhealthyThresholdCount: 2
+#      Matcher:
+#        HttpCode: "200"
       Port: 6443
       Protocol: TCP
       TargetType: instance  #upstream has this as "ip"
@@ -289,6 +291,8 @@ Resources:
       HealthCheckProtocol: HTTPS
       HealthyThresholdCount: 2
       UnhealthyThresholdCount: 2
+#      Matcher:
+#        HttpCode: "200"
       Port: 22623
       Protocol: TCP
       TargetType: instance #upstream has this as "ip"
